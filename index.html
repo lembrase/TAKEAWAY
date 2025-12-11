@@ -1,2 +1,499 @@
 <!DOCTYPE html>
-<html><body>Index placeholder</body></html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>L'Embrasé - Commande & Paiement</title>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    :root{
+      --p:#ff4b00;
+      --p2:#ff1a00;
+      --accent:#ff4b00;
+      --bg:#fff7f2;
+      --card:#ffffff;
+      --text:#1f2933;
+      --success:#00d26a;
+      --dark:#111827;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{
+      font-family:system-ui,-apple-system,Segoe UI,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      line-height:1.5;
+    }
+    .container{max-width:1100px;margin:0 auto;padding:0 1rem;}
+    header{
+      position:sticky;top:0;z-index:100;
+      background:linear-gradient(135deg,var(--p),var(--p2));
+      color:#fff;box-shadow:0 8px 24px rgba(0,0,0,.25);
+    }
+    .header-inner{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:1.2rem 0;gap:1rem;
+    }
+    .brand-title{font-size:2rem;font-weight:900;letter-spacing:.05em;}
+    .brand-sub{font-size:.9rem;opacity:.95;}
+    .header-actions{display:flex;align-items:center;gap:.8rem;}
+    .icon-btn{
+      width:46px;height:46px;border-radius:999px;border:none;background:#fff;
+      display:flex;align-items:center;justify-content:center;
+      font-size:1.3rem;cursor:pointer;position:relative;
+      box-shadow:0 4px 14px rgba(0,0,0,.20);
+    }
+    .badge{
+      position:absolute;top:-6px;right:-6px;min-width:22px;height:22px;
+      border-radius:999px;background:#ff2626;color:#fff;
+      display:flex;align-items:center;justify-content:center;
+      font-size:.75rem;font-weight:700;
+    }
+    .hero-wrap{background:var(--bg);padding-bottom:1rem;}
+    .hero{
+      max-width:1100px;margin:0 auto;border-radius:0 0 32px 32px;
+      overflow:hidden;box-shadow:0 18px 45px rgba(0,0,0,.25);
+    }
+    .hero img{display:block;width:100%;height:260px;object-fit:cover;}
+    main{padding:2.5rem 0 4rem;}
+    .card{
+      background:var(--card);border-radius:24px;padding:1.8rem 1.6rem;
+      box-shadow:0 14px 40px rgba(0,0,0,.12);margin-bottom:1.8rem;
+    }
+    .card-title{
+      font-size:1.9rem;font-weight:800;text-align:center;
+      margin-bottom:.5rem;color:var(--dark);
+    }
+    .card-sub{text-align:center;font-size:.98rem;color:#4b5563;}
+    .card-sub strong{color:#047857;}
+    h2.section-title{
+      text-align:center;color:var(--accent);font-size:2rem;
+      font-weight:800;margin:2.5rem 0 1.5rem;
+    }
+    .menu-list{display:flex;flex-direction:column;gap:1.3rem;}
+    .menu-card{
+      background:#fff;border-radius:28px;padding:1.4rem 1.4rem 1.6rem;
+      border:3px solid rgba(255,120,40,.9);
+      box-shadow:0 10px 28px rgba(0,0,0,.12);position:relative;
+    }
+    .price-pill{
+      position:absolute;top:-14px;left:18px;background:#ff0000;color:#fff;
+      padding:.35rem .9rem;border-radius:999px;font-weight:800;font-size:.9rem;
+      box-shadow:0 8px 16px rgba(0,0,0,.25);
+    }
+    .menu-name{font-size:1.25rem;font-weight:800;margin-bottom:.15rem;}
+    .menu-subtitle{font-size:.92rem;color:#6b7280;margin-bottom:.45rem;}
+    .menu-desc{font-size:.9rem;color:#4b5563;margin-bottom:1.1rem;}
+    .btn{
+      width:100%;padding:1rem;border-radius:18px;border:none;
+      background:#ff4b00;color:#fff;font-weight:800;font-size:1rem;
+      cursor:pointer;transition:.15s transform,.15s box-shadow,.2s background;
+      box-shadow:0 10px 22px rgba(0,0,0,.18);
+    }
+    .btn:hover{
+      transform:translateY(-1px);
+      background:#e84100;
+      box-shadow:0 14px 30px rgba(0,0,0,.25);
+    }
+    .btn:active{transform:translateY(1px);box-shadow:0 5px 15px rgba(0,0,0,.18);}
+    .btn-pay{background:var(--success);margin-top:1rem;font-size:1.15rem;}
+    .btn-pay:hover{background:#06b45a;}
+    .inputs{margin-top:1.5rem;display:flex;flex-direction:column;gap:.9rem;}
+    .inputs input{
+      width:100%;padding:0.9rem 1rem;border-radius:14px;
+      border:2px solid #e5e7eb;font-size:.95rem;
+    }
+    .inputs small{font-size:.78rem;color:#047857;}
+    .inline-radio{margin-top:.5rem;}
+    .inline-radio p{font-weight:600;margin-bottom:.4rem;}
+    .inline-radio label{
+      display:flex;align-items:center;gap:.45rem;font-size:.9rem;
+      margin-bottom:.35rem;cursor:pointer;
+    }
+    #card-element{
+      background:#fff;padding:.9rem;border-radius:14px;
+      border:2px solid #e5e7eb;margin-top:1rem;
+    }
+    #payment-status{
+      margin-top:.8rem;padding:.7rem .8rem;border-radius:12px;
+      font-size:.9rem;text-align:center;font-weight:600;
+    }
+    .success{background:#d1fae5;color:#065f46;}
+    .error{background:#fee2e2;color:#b91c1c;}
+    .loyalty{margin-top:2.5rem;}
+    .loyalty-card{
+      background:#111827;color:#f9fafb;border-radius:26px;
+      padding:2rem 1.6rem;box-shadow:0 18px 45px rgba(0,0,0,.35);
+      position:relative;overflow:hidden;
+    }
+    .loyalty-card::after{
+      content:"★";position:absolute;right:18px;top:6px;
+      font-size:7rem;color:rgba(249,250,251,.06);
+    }
+    .loyalty-title{
+      text-align:center;font-size:1.8rem;font-weight:900;
+      letter-spacing:.06em;margin-bottom:.35rem;
+    }
+    .loyalty-sub{text-align:center;margin-bottom:.6rem;font-size:.95rem;}
+    .loyalty-main{
+      text-align:center;font-size:1.1rem;font-weight:900;
+      margin-bottom:.45rem;color:#fde68a;
+    }
+    .loyalty-small{text-align:center;font-size:.9rem;color:#e5e7eb;}
+    footer{
+      background:#111827;color:#e5e7eb;text-align:center;
+      padding:2.2rem 1rem;margin-top:3rem;font-size:.9rem;
+    }
+    .cart-line{
+      display:flex;justify-content:space-between;align-items:flex-start;
+      padding:.7rem 0;border-bottom:1px solid #e5e7eb;font-size:.93rem;
+    }
+    .cart-line strong{display:block;}
+    .cart-actions{display:flex;gap:.35rem;}
+    .small-icon{
+      width:32px;height:32px;border-radius:999px;border:none;
+      background:#fef2f2;cursor:pointer;font-size:1.1rem;
+      display:flex;align-items:center;justify-content:center;
+    }
+    @media(max-width:640px){
+      .header-inner{align-items:flex-start;flex-direction:column;}
+      .hero img{height:220px;}
+      h2.section-title{font-size:1.7rem;}
+      .card-title{font-size:1.7rem;}
+    }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <script>
+    const stripe = Stripe("pk_test_xxxxx");
+    const SERVER_URL = "https://lembrase-paiement.vercel.app/api";
+
+    const weeklySpecial = {
+      id: 1,
+      name: "Tartiflette au brasero",
+      subtitle: "Plat de la Semaine",
+      desc: "Pommes de terre, lardons, oignons, reblochon fondu au brasero.",
+      price: 12.00
+    };
+    const caesarSalad = {
+      id: 2,
+      name: "Salade César L'Embrasé",
+      subtitle: "Salade César maison",
+      desc: "Poulet grillé, parmesan, croûtons, sauce César maison.",
+      price: 12.00
+    };
+    const menuItems = [weeklySpecial, caesarSalad];
+
+    let cart = JSON.parse(localStorage.getItem("lembrase_cart")) || [];
+    let customerInfo = { name:"", phone:"", pickupTime:"" };
+    let view = "menu";
+    let paymentMode = "online";
+    let stripeElements = null;
+    let cardElement = null;
+
+    function saveCart(){ localStorage.setItem("lembrase_cart", JSON.stringify(cart)); }
+    function totalItems(){ return cart.reduce((s,i)=>s+i.quantity,0); }
+    function totalPrice(){ return cart.reduce((s,i)=>s+i.price*i.quantity,0); }
+    function formatPrice(v){ return v.toFixed(2).replace(".",","); }
+
+    function addToCartById(id){
+      const item = menuItems.find(m => m.id === id);
+      if (!item) return;
+      const existing = cart.find(i=>i.id===item.id);
+      if (existing) existing.quantity++;
+      else cart.push({...item, quantity:1});
+      saveCart();render();
+    }
+
+    function updateQty(id,delta){
+      const it = cart.find(i=>i.id===id);
+      if (!it) return;
+      it.quantity += delta;
+      if (it.quantity<=0) cart = cart.filter(i=>i.id!==id);
+      saveCart();render();
+    }
+
+    function sendEmailOnline(){
+      const itemsText = cart.map(i=>`${i.quantity}x ${i.name}`).join("%0A");
+      const body =
+        `PAIEMENT ACCEPTÉ 🔥%0A%0A` +
+        `Client: ${customerInfo.name}%0A` +
+        `Tél: ${customerInfo.phone}%0A` +
+        `Retrait: ${customerInfo.pickupTime}%0A%0A` +
+        `${itemsText}%0A%0A` +
+        `TOTAL: ${formatPrice(totalPrice())}€`;
+      window.location.href =
+        `mailto:sarllinchard@gmail.com?subject=PAIEMENT OK - Commande&body=${body}`;
+    }
+
+    function sendEmailOnsite(){
+      const itemsText = cart.map(i=>`${i.quantity}x ${i.name}`).join("%0A");
+      const body =
+        `COMMANDE À RÉGLER SUR PLACE 💶%0A%0A` +
+        `Client: ${customerInfo.name}%0A` +
+        `Tél: ${customerInfo.phone}%0A` +
+        `Retrait: ${customerInfo.pickupTime}%0A%0A` +
+        `${itemsText}%0A%0A` +
+        `TOTAL À ENCAISSER: ${formatPrice(totalPrice())}€`;
+      window.location.href =
+        `mailto:sarllinchard@gmail.com?subject=Commande à régler sur place&body=${body}`;
+    }
+
+    function resetOrder(){
+      cart = [];saveCart();
+      customerInfo = { name:"", phone:"", pickupTime:"" };
+      paymentMode = "online";view = "menu";render();
+    }
+
+    async function payWithStripe(){
+      if (paymentMode !== "online") return;
+      if (!cart.length) return alert("Panier vide !");
+      if (!customerInfo.name || !customerInfo.phone || !customerInfo.pickupTime)
+        return alert("Veuillez remplir vos coordonnées et l'heure de retrait.");
+      if (!cardElement){ alert("Le formulaire de carte n'est pas prêt."); return; }
+
+      const btn = document.getElementById("pay-btn");
+      const status = document.getElementById("payment-status");
+      btn.disabled = true;btn.textContent = "Traitement en cours...";
+      status.textContent = "";status.className = "";
+
+      try{
+        const resp = await fetch(`${SERVER_URL}/create-payment-intent`,{
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({
+            amount: Math.round(totalPrice()*100),
+            metadata:{
+              customer_name: customerInfo.name,
+              customer_phone: customerInfo.phone,
+              pickup_time: customerInfo.pickupTime,
+              items: JSON.stringify(cart.map(i=>`${i.quantity}x ${i.name}`))
+            }
+          })
+        });
+        if (!resp.ok) throw new Error("Erreur serveur de paiement.");
+        const data = await resp.json();
+        const clientSecret = data.clientSecret;
+        if (!clientSecret) throw new Error("clientSecret manquant.");
+
+        const { error, paymentIntent } =
+          await stripe.confirmCardPayment(clientSecret,{
+            payment_method:{
+              card: cardElement,
+              billing_details:{
+                name: customerInfo.name,
+                phone: customerInfo.phone
+              }
+            }
+          });
+
+        if (error){
+          status.className = "error";
+          status.textContent = error.message;
+          btn.disabled = false;
+          btn.textContent = `Payer ${formatPrice(totalPrice())} € & Confirmer`;
+          return;
+        }
+
+        if (paymentIntent && paymentIntent.status === "succeeded"){
+          status.className = "success";
+          status.textContent = "Paiement accepté ✅";
+          alert(
+            `Paiement accepté ! 🔥
+
+` +
+            `Votre commande sera prête à ${customerInfo.pickupTime}.`
+          );
+          sendEmailOnline();resetOrder();
+        }
+
+      }catch(err){
+        status.className = "error";
+        status.textContent = err.message;
+        btn.disabled = false;
+        btn.textContent = `Payer ${formatPrice(totalPrice())} € & Confirmer`;
+      }
+    }
+
+    function confirmOnsiteOrder(){
+      if (!cart.length) return alert("Panier vide !");
+      if (!customerInfo.name || !customerInfo.phone || !customerInfo.pickupTime)
+        return alert("Veuillez remplir vos coordonnées et l'heure de retrait.");
+      alert(
+        `Commande enregistrée ! 🔥
+
+` +
+        `Vous réglerez directement au restaurant.
+` +
+        `Retrait à ${customerInfo.pickupTime}.`
+      );
+      sendEmailOnsite();resetOrder();
+    }
+
+    function render(){
+      const itemsCount = totalItems();
+      let html = `
+        <header>
+          <div class="container">
+            <div class="header-inner">
+              <div>
+                <div class="brand-title">L'EMBRASÉ</div>
+                <div class="brand-sub">10 Place Anatole France, 30220 Aigues-Mortes • 04 66 51 24 78</div>
+              </div>
+              <div class="header-actions">
+                <button class="icon-btn" onclick="view='cart';render()">
+                  🧺
+                  ${itemsCount>0 ? `<span class="badge">${itemsCount}</span>` : ""}
+                </button>
+                <button class="icon-btn" onclick="view='menu';render()">🏠</button>
+              </div>
+            </div>
+          </div>
+        </header>
+        <div class="hero-wrap">
+          <div class="hero">
+            <img src="images/salle-lembrase.jpg" alt="Salle du restaurant L'Embrasé">
+          </div>
+        </div>
+        <main>
+          <div class="container">
+      `;
+
+      if (view === "menu"){
+        html += `
+          <section class="card">
+            <h1 class="card-title">Commande & Paiement</h1>
+            <p class="card-sub">
+              Payez en ligne par carte bancaire ou choisissez le règlement sur place.<br>
+              <strong>Après validation, vous pourrez recevoir un SMS de confirmation.</strong>
+            </p>
+          </section>
+          <h2 class="section-title">La Carte</h2>
+          <section class="menu-list">
+            ${menuItems.map(item => `
+              <article class="menu-card">
+                <div class="price-pill">${formatPrice(item.price)}€</div>
+                <div class="menu-subtitle">${item.subtitle}</div>
+                <div class="menu-name">${item.name}</div>
+                <p class="menu-desc">${item.desc}</p>
+                <button class="btn" onclick="addToCartById(${item.id})">
+                  Ajouter au panier
+                </button>
+              </article>
+            `).join("")}
+          </section>
+          <section class="loyalty">
+            <div class="loyalty-card">
+              <div class="loyalty-title">CARTE DE FIDÉLITÉ</div>
+              <div class="loyalty-sub">Votre fidélité récompensée !</div>
+              <div class="loyalty-main">10 REPAS COMMANDÉS = 1 BON DE 25€</div>
+              <div class="loyalty-small">
+                Pour venir déguster à L'Embrasé une de nos spécialités.
+              </div>
+            </div>
+          </section>
+        `;
+      }
+
+      if (view === "cart"){
+        html += `
+          <section class="card">
+            <h1 class="card-title">Votre commande</h1>
+            <p class="card-sub">
+              Total actuel : <strong>${formatPrice(totalPrice())} €</strong>
+            </p>
+            ${
+              !cart.length
+              ? `<p style="margin-top:1.5rem;">Votre panier est vide pour le moment.</p>
+                 <button class="btn" style="margin-top:1rem;" onclick="view='menu';render()">⬅ Retour à la carte</button>`
+              : `
+                <div style="margin-top:1.2rem;">
+                  ${cart.map(i=>`
+                    <div class="cart-line">
+                      <div>
+                        <strong>${i.quantity}× ${i.name}</strong>
+                        <span>${formatPrice(i.price)} € / unité</span>
+                      </div>
+                      <div class="cart-actions">
+                        <button class="small-icon" onclick="updateQty(${i.id},-1)">−</button>
+                        <button class="small-icon" onclick="updateQty(${i.id},1)">+</button>
+                      </div>
+                    </div>
+                  `).join("")}
+                </div>
+                <div class="inputs">
+                  <input type="text" placeholder="Nom complet *"
+                         value="${customerInfo.name}"
+                         oninput="customerInfo.name=this.value">
+                  <input type="tel" placeholder="Téléphone (pour SMS) *"
+                         value="${customerInfo.phone}"
+                         oninput="customerInfo.phone=this.value">
+                  <input type="time" placeholder="Heure de retrait *"
+                         value="${customerInfo.pickupTime}"
+                         oninput="customerInfo.pickupTime=this.value">
+                  <small>Le restaurant peut vous envoyer un SMS de confirmation ou de rappel à ce numéro.</small>
+                  <div class="inline-radio">
+                    <p>Mode de paiement</p>
+                    <label>
+                      <input type="radio" name="paymentMode" value="online"
+                             ${paymentMode==="online"?"checked":""}
+                             onclick="paymentMode='online';render()">
+                      Paiement en ligne par carte (Stripe)
+                    </label>
+                    <label>
+                      <input type="radio" name="paymentMode" value="onsite"
+                             ${paymentMode==="onsite"?"checked":""}
+                             onclick="paymentMode='onsite';render()">
+                      Paiement sur place (espèces / CB au comptoir)
+                    </label>
+                  </div>
+                </div>
+                ${
+                  paymentMode==="online"
+                    ? `
+                      <div id="card-element"></div>
+                      <div id="payment-status"></div>
+                      <button id="pay-btn" class="btn btn-pay" onclick="payWithStripe()">
+                        Payer ${formatPrice(totalPrice())} € & Confirmer
+                      </button>
+                      <p style="margin-top:.6rem;font-size:.85rem;color:#4b5563;">
+                        Paiement sécurisé par Stripe. Aucune donnée bancaire n'est stockée par le restaurant.
+                      </p>
+                    `
+                    : `
+                      <button class="btn btn-pay" style="background:#f97316;" onclick="confirmOnsiteOrder()">
+                        Confirmer la commande à régler sur place
+                      </button>
+                      <p style="margin-top:.6rem;font-size:.85rem;color:#4b5563;">
+                        Vous réglerez directement au restaurant. Aucun paiement en ligne ne sera effectué.
+                      </p>
+                    `
+                }
+              `
+            }
+          </section>
+        `;
+      }
+
+      html += `
+          </div>
+        </main>
+        <footer>
+          L'EMBRASÉ • Restaurant & Brasero – 10 Place Anatole France, 30220 Aigues-Mortes • 04 66 51 24 78
+        </footer>
+      `;
+      document.getElementById("app").innerHTML = html;
+
+      if (view==="cart" && cart.length && paymentMode==="online"){
+        if (!stripeElements) stripeElements = stripe.elements();
+        if (cardElement) cardElement.unmount();
+        cardElement = stripeElements.create("card",{ style:{ base:{ fontSize:"16px" } } });
+        cardElement.mount("#card-element");
+      }else{
+        if (cardElement){ cardElement.unmount(); cardElement = null; }
+      }
+    }
+    render();
+  </script>
+</body>
+</html>
